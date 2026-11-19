@@ -13,15 +13,12 @@ const fieldStyle = 'field text-base notebook:text-sm'
 
 export function TaskEditor({ task, onSave, onCancel, onDelete }: Props) {
   const [draft, setDraft] = useState(task)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const title = draft.title.trim()
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (title) onSave({ ...draft, title, subject: draft.subject.trim() })
-  }
-
-  function confirmDelete() {
-    if (window.confirm(`「${task.title}」を削除しますか？ この操作は元に戻せません。`)) onDelete()
   }
 
   return (
@@ -55,11 +52,21 @@ export function TaskEditor({ task, onSave, onCancel, onDelete }: Props) {
         <textarea className={`${fieldStyle} resize-y`} rows={3} value={draft.notes}
           onChange={e => setDraft({ ...draft, notes: e.target.value })} />
       </label>
-      <div className="flex flex-wrap items-center gap-1">
-        <button className="button button-primary" disabled={!title}>保存</button>
-        <button className="button" type="button" onClick={onCancel}>キャンセル</button>
-        <button className="button ms-auto text-warning" type="button" onClick={confirmDelete}>削除</button>
-      </div>
+      {confirmingDelete ? (
+        <div className="rounded-lg border border-rule p-3">
+          <p role="status">「{task.title}」を削除しますか？ この操作は元に戻せません。</p>
+          <div className="mt-2 flex flex-wrap justify-end gap-1">
+            <button className="button" type="button" autoFocus onClick={() => setConfirmingDelete(false)}>キャンセル</button>
+            <button className="button text-warning" type="button" onClick={onDelete}>削除する</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1">
+          <button className="button button-primary" disabled={!title}>保存</button>
+          <button className="button" type="button" onClick={onCancel}>キャンセル</button>
+          <button className="button ms-auto text-warning" type="button" onClick={() => setConfirmingDelete(true)}>削除</button>
+        </div>
+      )}
     </form>
   )
 }
