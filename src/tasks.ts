@@ -9,22 +9,27 @@ export type Task = TaskFields & { id: string; done: boolean }
 
 export const storageKey = 'kakisashi:tasks:v1'
 
+export function createTask(title: string): Task {
+  return { id: crypto.randomUUID(), title, subject: '', date: '', time: '', notes: '', done: false }
+}
+
+function isSavedTask(task: Partial<Task> | null): task is Task {
+  return task != null &&
+    typeof task.id === 'string' &&
+    typeof task.title === 'string' && task.title.trim() !== '' &&
+    typeof task.subject === 'string' && typeof task.notes === 'string' &&
+    typeof task.date === 'string' && typeof task.time === 'string' &&
+    typeof task.done === 'boolean'
+}
+
 export function readTasks(raw: string | null): Task[] {
   if (raw === null) return []
-  const data: unknown = JSON.parse(raw)
-  const valid = (t: unknown): t is Task =>
-    typeof t === 'object' && t !== null &&
-    'id' in t && typeof t.id === 'string' &&
-    'title' in t && typeof t.title === 'string' && t.title.trim() !== '' &&
-    'subject' in t && typeof t.subject === 'string' &&
-    'notes' in t && typeof t.notes === 'string' &&
-    'date' in t && typeof t.date === 'string' &&
-    'time' in t && typeof t.time === 'string' &&
-    'done' in t && typeof t.done === 'boolean'
-  if (!Array.isArray(data) || !data.every(valid) || new Set(data.map(t => t.id)).size !== data.length) {
-    throw new Error('Invalid task list')
-  }
-  return data
+  const tasks: unknown = JSON.parse(raw)
+  if (!Array.isArray(tasks) || !tasks.every(isSavedTask)) throw new Error('Invalid task list')
+
+  const ids = tasks.map(task => task.id)
+  if (new Set(ids).size !== ids.length) throw new Error('Duplicate task ID')
+  return tasks
 }
 
 export function overdue(task: Task, now: number) {
