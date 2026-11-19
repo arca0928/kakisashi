@@ -48,3 +48,5 @@ pnpm dev
 ```
 
 `direnv` を使う場合は、`nix develop` の代わりに `direnv allow` で開発環境に入れます。NixOS で Cloudflare のローカル実行に使う `workerd` は、開発シェルの起動時と `pnpm install` の際に自動で設定されます。
+
+開発期間: 2026-10-23 - 2026-11-19 (約16時間)
