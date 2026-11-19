@@ -1,6 +1,6 @@
 {
   "bundler": "vite",
-  "projectName": "tanstack-react-todo",
+  "projectName": "kakisashi",
   "mode": "file-router",
   "typescript": true,
   "packageManager": "pnpm",

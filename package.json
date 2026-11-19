@@ -1,5 +1,5 @@
 {
-  "name": "tanstack-react-todo",
+  "name": "kakisashi",
   "private": true,
   "type": "module",
   "imports": {
@@ -11,7 +11,7 @@
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "pnpm run build && wrangler deploy"
+    "deploy": "pnpm run build && cf deploy --prebuilt"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
@@ -37,14 +37,6 @@
     "vite": "^8.3.8",
     "workerd": "^1.20261118.1",
     "wrangler": "^4.164.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss",
-      "sharp",
-      "workerd"
-    ]
   },
   "intent": {
     "skills": [

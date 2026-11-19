@@ -2,7 +2,7 @@ import { defineConfig } from "cf/config";
 
 export default defineConfig({
 	worker: {
-		name: "tanstack-start-app",
+		name: "kakisashi",
 		compatibilityDate: "2026-10-23",
 		compatibilityFlags: [
 			"nodejs_compat",
