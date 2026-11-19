@@ -9,6 +9,11 @@ pnpm install
 pnpm dev
 ```
 
+On NixOS, run these commands inside `nix develop` (or use `direnv` with
+`direnv allow` from the project root). The shell hook prepares installed
+`workerd` binaries for NixOS, and `pnpm install` does the same for new installs
+and dependency updates in that shell.
+
 # Building For Production
 
 To build this application for production:
