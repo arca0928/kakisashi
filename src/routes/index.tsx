@@ -1,84 +1,96 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { ClientOnly, createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { TaskCapture } from '../components/TaskCapture'
 import { TaskRow } from '../components/TaskRow'
-import { readTasks, storageKey, type Task } from '../tasks'
+import { createTask, type Task } from '../tasks'
+import { loadTasks, persistTasks } from '../taskStorage'
 
 export const Route = createFileRoute('/')({ component: Home })
 
-function Home() {
-  const [tasks, setTasks] = useState<Task[] | null>(null)
-  const [error, setError] = useState('')
-  const [title, setTitle] = useState('')
-  const [now, setNow] = useState(0)
-  const input = useRef<HTMLInputElement>(null)
-  const composing = useRef(false)
+const listStyle = 'mt-2 divide-y divide-rule'
+const countStyle = 'ml-1.5 text-xs font-semibold text-muted tabular-nums'
 
+function Home() {
+  return (
+    <main className="mx-auto my-[clamp(2rem,8vh,5rem)] w-[calc(100%-2rem)] max-w-[43rem]">
+      <header>
+        <h1 className="font-[Georgia,serif] text-[2rem] font-bold tracking-[-.04em]">
+          kakisashi<span className="text-[#6d9ab6]" aria-hidden="true">.</span>
+        </h1>
+        <p className="mt-1 text-muted">授業の課題を、ひとこと。</p>
+      </header>
+      <ClientOnly fallback={<p className="py-4 text-muted">読み込み中…</p>}>
+        <Notebook />
+      </ClientOnly>
+    </main>
+  )
+}
+
+function Notebook() {
+  const [stored, setTasks] = useState(loadTasks)
+  const [saveError, setSaveError] = useState('')
+  const [now, setNow] = useState(Date.now)
+
+  // 開いたまま締切を過ぎたときも表示を更新する。
   useEffect(() => {
-    try {
-      setTasks(readTasks(localStorage.getItem(storageKey)))
-    } catch {
-      setError('保存した課題を読み込めませんでした。元のデータを守るため、書き込みを停止しています。')
-    }
-    setNow(Date.now())
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
-    return () => window.clearInterval(timer)
+    const timer = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(timer)
   }, [])
 
-  const ready = tasks !== null
-  useEffect(() => {
-    if (ready && document.activeElement === document.body && window.matchMedia('(pointer: fine)').matches) {
-      input.current?.focus({ preventScroll: true })
-    }
-  }, [ready])
+  if (stored === null) {
+    return <p role="alert" className="py-4 text-warning">保存した課題を読み込めませんでした。元のデータを守るため、書き込みを停止しています。</p>
+  }
+  const tasks = stored
 
   function save(next: Task[]) {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(next))
+      persistTasks(next)
       setTasks(next)
-      setError('')
+      setSaveError('')
       return true
     } catch {
-      setError('変更を保存できませんでした。ブラウザの保存設定と空き容量を確認してください。')
+      setSaveError('変更を保存できませんでした。ブラウザの保存設定と空き容量を確認してください。')
       return false
     }
   }
 
-  function row(task: Task) {
-    return <TaskRow key={task.id} task={task} now={now}
-      onChange={updated => tasks !== null && save(tasks.map(t => t.id === task.id ? updated : t))}
-      onDelete={() => tasks !== null && save(tasks.filter(t => t.id !== task.id))} />
+  const pending = tasks.filter(task => !task.done)
+  const done = tasks.filter(task => task.done)
+  const subjects = new Set(tasks.map(task => task.subject).filter(Boolean))
+
+  function renderRow(task: Task) {
+    return (
+      <TaskRow
+        key={task.id}
+        task={task}
+        now={now}
+        onChange={updated => save(tasks.map(t => t.id === updated.id ? updated : t))}
+        onDelete={() => save(tasks.filter(t => t.id !== task.id))}
+      />
+    )
   }
-  const pending = tasks?.filter(t => !t.done) ?? []
-  const done = tasks?.filter(t => t.done) ?? []
 
   return (
-    <main className="notebook">
-      <header><h1>kakisashi<span aria-hidden="true">.</span></h1><p>授業の課題を、ひとこと。</p></header>
-      <form className="capture" aria-label="課題の登録" onSubmit={e => {
-        e.preventDefault()
-        if (!tasks || composing.current || !title.trim()) return
-        if (save([{ id: crypto.randomUUID(), title: title.trim(), done: false, subject: '', date: '', time: '', notes: '' }, ...tasks])) {
-          setTitle('')
-          if (window.matchMedia('(pointer: fine)').matches) input.current?.focus()
-        }
-      }}>
-        <input aria-label="課題名" placeholder="課題をひとこと入力" ref={input} value={title} disabled={!ready}
-          onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && (composing.current || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229)) e.preventDefault()
-          }} onChange={e => setTitle(e.target.value)} />
-        <button className="primary" disabled={!tasks || !title.trim()}>追加</button>
-      </form>
-      {error && <p role="alert" className="late">{error}</p>}
+    <>
+      <TaskCapture onAdd={title => save([createTask(title), ...tasks])} />
+      {saveError && <p role="alert" className="text-warning">{saveError}</p>}
       <section aria-labelledby="pending-heading">
-        <h2 id="pending-heading">未完了 {tasks && <span className="count">{pending.length}</span>}</h2>
-        {pending.length > 0 ? <ul>{pending.map(row)}</ul> : <p className="empty">{tasks ? '未完了の課題はありません。' : error ? '一覧を表示できません。' : '読み込み中…'}</p>}
+        <h2 id="pending-heading" className="font-semibold">
+          未完了 <span className={countStyle}>{pending.length}</span>
+        </h2>
+        {pending.length > 0
+          ? <ul className={listStyle}>{pending.map(renderRow)}</ul>
+          : <p className="py-4 text-muted">未完了の課題はありません。</p>}
       </section>
-      {done.length > 0 && <details className="completed">
-        <summary>完了済み <span className="count">{done.length}</span></summary>
-        <ul>{done.map(row)}</ul>
-      </details>}
-      <datalist id="subjects">{[...new Set(tasks?.map(t => t.subject).filter(Boolean))].map(s => <option key={s} value={s} />)}</datalist>
-    </main>
+      {done.length > 0 && (
+        <details className="mt-6 text-muted">
+          <summary className="py-2.5 font-semibold">完了済み <span className={countStyle}>{done.length}</span></summary>
+          <ul className={listStyle}>{done.map(renderRow)}</ul>
+        </details>
+      )}
+      <datalist id="subjects">
+        {Array.from(subjects, subject => <option key={subject} value={subject} />)}
+      </datalist>
+    </>
   )
 }

@@ -1,11 +1,12 @@
-export type TaskFields = {
+export type Task = {
+  id: string
   title: string
   subject: string
   date: string
   time: string
   notes: string
+  done: boolean
 }
-export type Task = TaskFields & { id: string; done: boolean }
 
 export const storageKey = 'kakisashi:tasks:v1'
 
